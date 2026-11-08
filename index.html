@@ -1,5 +1,238 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>mcloud decisions</title><meta name="robots" content="noindex">
-<style>:root{color-scheme:light dark}body{font:16px/1.5 -apple-system,system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px}</style>
-</head><body><h1>mcloud decisions</h1><p>Design decisions for <a href="https://github.com/mcloudHQ/mcloud">mcloud</a> open pull requests. Nothing to decide yet.</p>
-<!-- build: placeholder --></body></html>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex"><title>mcloud decisions</title>
+<style>
+/* Layout: one reading column of task sections, each with a decision chip; images full column width, tap to enlarge. */
+:root{
+  --bg:#f6f5f7; --surface:#ffffff; --fg:#1c1b1f; --muted:#6c6873; --line:#e3e0e7;
+  --accent:#d6304a; --ok:#1f8a4c; --ask:#b8620b; --chip-ok:#e3f4ea; --chip-ask:#fbeedd; --code:#efedf2;
+  --display:"Fraunces",Georgia,serif; --body:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141317; --surface:#1d1c21; --fg:#ecebef; --muted:#a29fa9; --line:#2f2d35;
+  --accent:#ff5a72; --ok:#4cc584; --ask:#f0a24a; --chip-ok:#16301f; --chip-ask:#3a2a14; --code:#26242b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141317; --surface:#1d1c21; --fg:#ecebef; --muted:#a29fa9; --line:#2f2d35;
+  --accent:#ff5a72; --ok:#4cc584; --ask:#f0a24a; --chip-ok:#16301f; --chip-ask:#3a2a14; --code:#26242b; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1{font:600 clamp(30px,5vw,44px)/1.1 var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font:600 24px/1.2 var(--display);margin:0;text-wrap:balance}
+h3{font:600 13px/1.3 var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:6px 0 0}
+p{margin:0}
+.lede{color:var(--muted);max-width:65ch}
+a{color:var(--accent)}
+code{font:13px/1.4 var(--mono);background:var(--code);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+pre{font:13px/1.5 var(--mono);background:var(--code);padding:10px 12px;border-radius:8px;overflow-x:auto;margin:0}
+section{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.head{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;justify-content:space-between}
+.chip{font:600 12px/1 var(--body);padding:6px 9px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--chip-ok);color:var(--ok)}
+.chip.ask{background:var(--chip-ask);color:var(--ask)}
+ul,ol{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.q{border-left:3px solid var(--ask);padding:8px 12px;background:var(--chip-ask);border-radius:0 8px 8px 0;font-weight:500}
+.meta{font:13px/1.4 var(--mono);color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
+figure{margin:0;display:flex;flex-direction:column;gap:6px}
+figure img{border-radius:8px;border:1px solid var(--line);cursor:zoom-in;background:var(--code)}
+figcaption{font-size:13px;color:var(--muted)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px}
+.toc a{display:flex;justify-content:space-between;gap:8px;text-decoration:none;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.toc a:focus-visible,.toc a:hover{border-color:var(--accent)}
+dialog{border:0;padding:0;background:transparent;max-width:96vw;max-height:94vh}
+dialog img{max-height:94vh;border-radius:8px}
+dialog::backdrop{background:rgba(0,0,0,.8)}
+/* Decisions: option buttons inside each .pick, one note per section, copy at the end. */
+.pick{display:flex;flex-direction:column;gap:10px}
+.pick + .pick{margin-top:-2px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opts button{font:500 14px/1.2 var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:9px 14px;min-height:40px;cursor:pointer}
+.opts button:hover{border-color:var(--ask)}
+.opts button:focus-visible,.copy:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts button[aria-pressed="true"]{background:var(--ask);border-color:var(--ask);color:var(--surface);font-weight:600}
+.opts button[aria-pressed="true"]::before{content:"✓ "}
+.note{display:flex;flex-direction:column;gap:4px}
+.note label{font-size:13px;color:var(--muted)}
+textarea{font:15px/1.45 var(--body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:44px;resize:vertical;width:100%;box-sizing:border-box}
+.bar{position:sticky;bottom:max(12px,env(safe-area-inset-bottom,0px));z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 16px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.bar span{font-size:14px;color:var(--muted)}
+.copy{font:600 15px/1 var(--body);background:var(--accent);color:#fff;border:0;border-radius:999px;padding:12px 18px;min-height:44px;cursor:pointer;white-space:nowrap}
+.copy.big{align-self:flex-start;padding:14px 22px;font-size:16px}
+#out{font:13px/1.5 var(--mono);min-height:160px}
+details.txt pre{white-space:pre-wrap;font:13px/1.5 var(--mono);max-height:420px;overflow:auto}
+.done{color:var(--ok);font-weight:600;font-size:14px}
+</style>
+<style>.toc a{align-items:center}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono&display=swap">
+</head><body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <h1>mcloud: decisions, 9 November</h1>
+    <p class="lede"><a href="https://github.com/mcloudHQ/mcloud">mcloud</a> is a theme that makes the Spotify desktop app look like Apple Music on a Mac. Overnight, five changes were built and tested in the real Spotify app. Three need a design choice, and two are finished and only need an OK. <b>For each item, pick an option and add a note if you want. Then press "Copy" at the bottom and send the text to Emir.</b> Anything you leave unpicked stays as it is.</p>
+    <p class="lede" lang="tr">Türkçe: her maddede bir seçenek seç, istersen not yaz, en altta "Copy"ye bas ve metni Emir'e gönder. Seçmediğin hiçbir şey değişmez.</p>
+    <p class="meta"><span>Updated 2026-11-09 01:09</span><span>All screenshots: dark mode, personal data blurred or replaced</span></p>
+  </header>
+
+  <nav class="toc" aria-label="Items">
+    <a href="#issue-202"><span>#202 "New playlist" in folders</span><span class="chip ask">A / B</span></a>
+    <a href="#issue-199"><span>#199 "New release from" card</span><span class="chip ask">A / B / C</span></a>
+    <a href="#issue-200"><span>#200 Mac window buttons on Windows</span><span class="chip ask">A / B / C</span></a>
+    <a href="#pr-207"><span>#207 Glass tooltips</span><span class="chip ok">finished</span></a>
+    <a href="#pr-209"><span>#209 Now Playing: Spicy + width</span><span class="chip ok">finished</span></a>
+    <a href="#windows-test"><span>Have a Windows PC?</span><span class="chip ok">optional</span></a>
+  </nav>
+
+  <section id="issue-202" data-title="#202 New playlist inside folders (PR #205)">
+    <div class="head"><h2>#202 · "New playlist" inside folders</h2><span class="chip ask">Decide: A or B</span></div>
+    <div class="meta"><a href="https://github.com/mcloudHQ/mcloud/issues/202">Issue #202</a><a href="https://github.com/mcloudHQ/mcloud/pull/205">Draft PR #205</a><span>tested in Spotify on macOS</span></div>
+    <p><b>What it is.</b> Right-click a song or card → <i>Add to other playlist</i> → hover a <b>folder</b>. The folder's submenu starts with <b>"New playlist"</b>, even though you came here to pick an existing playlist. For an empty folder that row is all it shows.</p>
+    <p><b>What we found.</b> The row comes from Spotify itself, not from the theme: plain Spotify without mcloud shows it too. Apple Music offers "New Playlist" only once, at the top of its "Add to Playlist" menu.</p>
+    <div class="two">
+      <figure><img src="img/202-before.jpg" alt="mcloud today: hovering a folder opens a submenu with New playlist"><figcaption><b>Now (B):</b> the folder's submenu (right) starts with "New playlist".</figcaption></figure>
+      <figure><img src="img/202-a.jpg" alt="Option A: the folder's submenu lists only its playlist"><figcaption><b>Option A:</b> the folder's submenu lists only its playlists.</figcaption></figure>
+    </div>
+    <figure><img src="img/202-vanilla.jpg" alt="Spotify without the theme also shows New playlist in the folder's submenu"><figcaption>Spotify without mcloud: the same "New playlist" row in the folder's submenu.</figcaption></figure>
+    <ul>
+      <li><b>A: hide it inside folders</b> (recommended). Folder submenus list only their playlists. "New playlist" at the top of the list stays. Downside: you can no longer create a playlist directly inside a folder from this menu. You can still create it and move it in the sidebar.</li>
+      <li><b>B: keep it as Spotify has it.</b></li>
+    </ul>
+    <div class="q pick" data-id="202" data-opts="A: hide it in folders|B: keep Spotify's"><p>#202: "New playlist" inside folder submenus?</p></div>
+  </section>
+
+  <section id="issue-199" data-title="#199 New release from card (PR #208)">
+    <div class="head"><h2>#199 · Home's "New release from …" card</h2><span class="chip ask">Decide: A, B or C</span></div>
+    <div class="meta"><a href="https://github.com/mcloudHQ/mcloud/issues/199">Issue #199</a><a href="https://github.com/mcloudHQ/mcloud/pull/208">Draft PR #208</a><span>tested in Spotify on macOS</span></div>
+    <p><b>What it is.</b> Spotify's Home sometimes shows a "New release from &lt;artist&gt;" card. mcloud still showed it in Spotify's own style: a grey box, a white play circle, a "+" and a black tooltip. The person who reported it asked for a rounded glass card like mcloud's other cards.</p>
+    <p>All three options use Apple's buttons: a red play button, Apple Music's star for "save", and share in a frosted circle. The black tooltip is now glass in every option (that part is #207 below).</p>
+    <figure><img src="img/199-compare-rest.jpg" alt="Four versions side by side: now, A, B, C"><figcaption>Left to right: <b>now</b>, <b>A</b>, <b>B</b>, <b>C</b>.</figcaption></figure>
+    <figure><img src="img/199-compare-hover.jpg" alt="The same four versions with the save button hovered"><figcaption>The same four with the pointer on the save button (tooltip shown).</figcaption></figure>
+    <ul>
+      <li><b>A: buttons only.</b> Spotify's box and text stay. Only the buttons change.</li>
+      <li><b>B: rounded glass card</b>, slightly taller, with Apple's text sizes. This is what the reporter asked for, and it matches mcloud's "What's New" cards. It would be the only card on Home with a box behind it.</li>
+      <li><b>C: Apple Music's own style</b> (recommended). No box: the cover, a small caption and the title, as Apple Music shows new releases. Play appears on the cover, like on mcloud's other Home cards.</li>
+    </ul>
+    <figure><img src="img/199-apple.jpg" alt="Apple Music's promos on its New page: no box behind the cover"><figcaption>For reference: Apple Music's own promos never sit on a box.</figcaption></figure>
+    <p class="meta"><span>Note: Spotify did not show this card on the test account that night, so the card was rebuilt inside the real app from Spotify's real markup, with a public release.</span></p>
+    <div class="q pick" data-id="199" data-opts="A: buttons only|B: rounded glass card|C: Apple Music style"><p>#199: which look for the "New release from" card?</p></div>
+  </section>
+
+  <section id="issue-200" data-title="#200 Mac window buttons on Windows (PR #206)">
+    <div class="head"><h2>#200 · Mac-style window buttons on Windows</h2><span class="chip ask">Decide: A, B or C</span></div>
+    <div class="meta"><a href="https://github.com/mcloudHQ/mcloud/issues/200">Issue #200</a><a href="https://github.com/mcloudHQ/mcloud/pull/206">Draft PR #206</a><span>NOT yet tried on a real Windows PC</span></div>
+    <p><b>What it is.</b> On Windows, Spotify shows Windows' own minimise, maximise and close buttons. A user asked for the Mac's red, yellow and green buttons instead. This is now a theme setting: <i>Settings → General → Window buttons</i>, with <i>Windows</i> (as today), <i>macOS, left</i> or <i>macOS, right</i>. Red closes, yellow minimises and green maximises, and the symbols appear on hover. On a Mac nothing changes.</p>
+    <figure><img src="img/200-vs-macos.png" alt="macOS 27's own buttons beside mcloud's, dark and light, at rest, hovered and inactive"><figcaption>macOS's real buttons (left) beside mcloud's (right).</figcaption></figure>
+    <div class="two">
+      <figure><img src="img/200-before.png" alt="Top-left corner today on Windows: a three-dot menu"><figcaption>Top left today (Windows layout, preview).</figcaption></figure>
+      <figure><img src="img/200-left-hover.png" alt="Top-left corner with the Mac buttons, hovered"><figcaption>"macOS, left", hovered.</figcaption></figure>
+    </div>
+    <ul>
+      <li><b>A: off by default, green maximises</b> (recommended). Windows users turn it on themselves. Green fills the screen the Windows way and the taskbar stays. Alt-click on green goes full screen.</li>
+      <li><b>B: off by default, green goes full screen</b>, as on a Mac. This hides the Windows taskbar, which surprises most people.</li>
+      <li><b>C: on by default</b> for every Windows user. This is the most Apple-like out of the box, but it changes how everyone closes Spotify before anyone has tested it on Windows.</li>
+    </ul>
+    <div class="q pick" data-id="200" data-opts="A: off by default, green maximises|B: off by default, green = full screen|C: on by default"><p>#200: how should the Mac window buttons behave?</p></div>
+  </section>
+
+  <section id="pr-207" data-title="#207 Glass tooltips (finished)">
+    <div class="head"><h2>#207 · Glass tooltips</h2><span class="chip ok">Finished: OK to merge?</span></div>
+    <div class="meta"><a href="https://github.com/mcloudHQ/mcloud/pull/207">PR #207</a><span>tested in Spotify on macOS</span></div>
+    <p>Some of Spotify's newer tooltips (like the "Save to Your Library" one on the "New release from" card) were still solid black. They now get the same frosted glass as mcloud's other tooltips. There is nothing to choose here, only whether it looks right.</p>
+    <div class="two">
+      <figure><img src="img/207-before.jpg" alt="Before: a solid black tooltip"><figcaption>Before: a solid black tooltip.</figcaption></figure>
+      <figure><img src="img/207-after.jpg" alt="After: a glass tooltip"><figcaption>After: a glass tooltip (shown with option C of #199).</figcaption></figure>
+    </div>
+    <div class="q pick" data-id="207" data-opts="Looks good, merge|Needs changes (see note)|Wait"><p>#207: OK to merge?</p></div>
+  </section>
+
+  <section id="pr-209" data-title="#209 Now Playing Spicy + width (finished)">
+    <div class="head"><h2>#209 · Now Playing: Spicy Lyrics and a width setting</h2><span class="chip ok">Finished: OK to merge?</span></div>
+    <div class="meta"><a href="https://github.com/mcloudHQ/mcloud/pull/209">PR #209</a><a href="https://github.com/mcloudHQ/mcloud/issues/182">Issue #182</a><span>tested in Spotify on macOS</span></div>
+    <p>The right-hand "Now Playing" panel has a mode where it replaces the bottom player. Until now that mode always showed Spotify's plain lyrics. It now shows <a href="https://github.com/Spikerko/spicy-lyrics">Spicy Lyrics</a> (an add-on with animated lyrics) when it is installed, with the cover on top and the controls at the bottom.</p>
+    <p>There is also a new setting, <i>Now Playing → Width</i>: Narrow (280 px), Normal (today's width) and Wide (420 px). It replaces dragging the panel's edge, which was asked for but is costly to build and does not exist in Apple Music.</p>
+    <figure><img src="img/209-spicy.jpg" alt="Spicy Lyrics in the panel in three looks"><figcaption>Spicy Lyrics in the "instead of the player" mode, in three panel looks (preview, placeholder lyrics).</figcaption></figure>
+    <figure><img src="img/209-widths-card.jpg" alt="The panel at narrow, normal and wide"><figcaption>Narrow, Normal, Wide.</figcaption></figure>
+    <div class="q pick" data-id="209" data-opts="Looks good, merge|Needs changes (see note)|Wait"><p>#209: OK to merge?</p></div>
+  </section>
+
+  <section id="windows-test" data-title="Windows test" data-nonote>
+    <div class="head"><h2>Have a Windows PC? (optional)</h2><span class="chip ok">30–40 min</span></div>
+    <p>A few things have only been tested on a Mac: the glass effect at 125% and 150% display scaling, Spotify's menus, and the new window buttons from #200. If you can help, follow the <a href="https://github.com/emribilemir/mcloud-decisions/blob/main/windows-checklist.md">Windows tester checklist</a> and send the answers to Emir. Crop personal data out of the screenshots, as the checklist says.</p>
+  </section>
+
+  <section data-title="General">
+    <div class="head"><h2>Anything else?</h2></div>
+    <p>A general note, if you have one.</p>
+  </section>
+
+  <div class="bar"><span id="count"></span><button type="button" class="copy">Copy</button></div>
+  <section data-nonote>
+    <button type="button" class="copy big">Copy my choices</button>
+    <p class="done" hidden></p>
+    <details><summary>The text that will be copied</summary><textarea id="out" readonly></textarea></details>
+  </section>
+</div>
+<dialog id="zoom"><img alt=""></dialog>
+<!-- build: 2026-11-09 01:09 -->
+
+<script>
+const d=document.getElementById('zoom'),di=d.querySelector('img');
+document.querySelectorAll('figure img').forEach(i=>i.addEventListener('click',()=>{di.src=i.src;di.alt=i.alt;d.showModal();}));
+d.addEventListener('click',()=>d.close());
+
+// Decisions and notes: kept in localStorage as a per-viewer draft; the copied text is what reaches Claude.
+const KEY='mcloud-decisions-2026-11-09';
+let st={picks:{},notes:{}};
+try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v&&v.picks&&v.notes)st=v;}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}refresh();};
+const picks=[...document.querySelectorAll('.pick')];
+picks.forEach(p=>{
+  const id=p.dataset.id,q=p.querySelector('p'),g=document.createElement('div');
+  g.className='opts';g.setAttribute('role','group');g.setAttribute('aria-label',q.textContent);
+  p.dataset.choice=st.picks[id]||'';
+  p.dataset.opts.split('|').forEach(o=>{
+    const b=document.createElement('button');b.type='button';b.textContent=o;b.setAttribute('aria-pressed',String(st.picks[id]===o));
+    b.addEventListener('click',()=>{
+      const on=st.picks[id]!==o;if(on)st.picks[id]=o;else delete st.picks[id];
+      g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(on&&x===b)));save();
+    });
+    g.append(b);
+  });
+  p.append(g);
+});
+document.querySelectorAll('section[data-title]:not([data-nonote])').forEach((s,i)=>{
+  const w=document.createElement('div'),l=document.createElement('label'),t=document.createElement('textarea');
+  w.className='note';t.id='note-'+i;t.rows=2;t.dataset.note=s.dataset.title;t.placeholder='Your note or question about this…';
+  l.htmlFor=t.id;l.textContent='Note / question';w.append(l,t);s.append(w);
+});
+document.querySelectorAll('textarea[data-note]').forEach(t=>{
+  t.value=st.notes[t.dataset.note]||'';
+  t.addEventListener('input',()=>{const v=t.value.trim();if(v)st.notes[t.dataset.note]=t.value;else delete st.notes[t.dataset.note];save();});
+});
+const text=()=>{
+  const out=['mcloud decisions (page of 9 November) — choices:'];
+  document.querySelectorAll('section[data-title]').forEach(s=>{
+    const lines=[];
+    s.querySelectorAll('.pick').forEach(p=>{const c=st.picks[p.dataset.id];if(c)lines.push('- '+p.querySelector('p').textContent.trim()+' → '+c);});
+    const n=(st.notes[s.dataset.title]||'').trim();
+    if(n)lines.push((s.dataset.title==='General'?'':'- Note: ')+n.replace(/\n/g,'\n  '));
+    if(lines.length)out.push('',s.dataset.title,...lines);
+  });
+  const left=picks.filter(p=>!st.picks[p.dataset.id]).map(p=>p.closest('section').dataset.title+': '+p.querySelector('p').textContent.trim());
+  if(left.length)out.push('','Not picked (no decision, leave as is):',...left.map(x=>'- '+x));
+  return out.join('\n');
+};
+const out=document.getElementById('out'),done=document.querySelector('.done'),count=document.getElementById('count');
+function refresh(){const n=picks.filter(p=>st.picks[p.dataset.id]).length;count.textContent=n+' / '+picks.length+' picked';out.value=text();}
+refresh();
+async function copy(){
+  const t=text();out.value=t;let ok=false;
+  try{await navigator.clipboard.writeText(t);ok=true;}catch(e){}
+  if(!ok){try{out.closest('details').open=true;out.focus();out.select();ok=document.execCommand('copy');}catch(e){}}
+  done.hidden=false;
+  done.textContent=ok?'Copied. Send it to Emir.':'Could not copy: select the text below and copy it.';
+  if(!ok){out.closest('details').open=true;out.select();}
+  if(document.activeElement.closest('.bar'))done.scrollIntoView({block:'center'});
+}
+document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',copy));
+</script>
+</body></html>
